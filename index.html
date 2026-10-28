@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#168eb8">
+  <title>Flappy Shark</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+      color: #713e68;
+      background: #e4faff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 12% 18%, #ffffff99 0 3px, transparent 4px),
+        radial-gradient(circle at 88% 28%, #ffffff99 0 4px, transparent 5px),
+        linear-gradient(#dff8ff, #b8eafa);
+    }
+
+    .game-shell {
+      width: min(100%, 440px);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      color: #dc6399;
+      font-size: clamp(2rem, 8vw, 3rem);
+      letter-spacing: 1px;
+      text-shadow: 0 3px 0 #ffe0ed;
+    }
+
+    .game-frame {
+      position: relative;
+      overflow: hidden;
+      border: 6px solid #fff;
+      border-radius: 25px;
+      background: #168eb8;
+      box-shadow: 0 14px 34px #167d9b40, 0 3px 0 #78cce0;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 400 / 600;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #fff5f84d;
+      pointer-events: none;
+    }
+
+    .overlay[hidden] { display: none; }
+
+    .game-menu {
+      position: absolute;
+      z-index: 3;
+      top: 12px;
+      right: 12px;
+    }
+
+    .menu-toggle {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      padding: 0;
+      border: 2px solid #ffffffcc;
+      border-radius: 14px;
+      color: #fff;
+      background: #075476bd;
+      box-shadow: 0 3px 8px #063c5550;
+    }
+
+    .menu-toggle:hover { background: #064866; }
+
+    .menu-toggle svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-width: 2.5;
+    }
+
+    .menu-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 8px;
+      border: 2px solid #ffffffd9;
+      border-radius: 16px;
+      background: #075476dd;
+      box-shadow: 0 4px 12px #063c5550;
+    }
+
+    .menu-actions[hidden] { display: none; }
+
+    .menu-actions button {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      padding: 0;
+      border-radius: 12px;
+      color: #fff;
+      background: #e876a7;
+      box-shadow: 0 3px 0 #c95788;
+    }
+
+    .menu-actions button:hover { background: #dc6599; }
+
+    .menu-actions button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+      transform: none;
+    }
+
+    .menu-actions svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    .menu-actions .icon-fill { fill: currentColor; stroke: none; }
+
+    .card {
+      width: min(100%, 300px);
+      padding: 25px 22px 22px;
+      border: 3px solid #fff;
+      border-radius: 24px;
+      background: #fff8fbf2;
+      box-shadow: 0 8px 22px #a84c7930;
+      pointer-events: auto;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      color: #d95f97;
+      font-size: 1.65rem;
+    }
+
+    .card p {
+      margin: 0 0 18px;
+      color: #795b76;
+      line-height: 1.5;
+    }
+
+    .card p:empty { display: none; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #join-form { display: grid; gap: 12px; }
+
+    #player-name {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 2px solid #e9b9d1;
+      border-radius: 12px;
+      color: #967f9f;
+      background: #fff;
+      font: inherit;
+      text-align: center;
+    }
+
+    #player-name::placeholder { color: #b6a8bc; opacity: 1; }
+
+    #player-name:focus-visible {
+      outline: 3px solid #65bcd1;
+      outline-offset: 2px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 25px;
+      color: white;
+      background: #e876a7;
+      box-shadow: 0 4px 0 #c95788;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s, background .12s;
+    }
+
+    button:hover { background: #dc6599; transform: translateY(-1px); }
+    button:active { transform: translateY(2px); box-shadow: 0 2px 0 #c95788; }
+    button:focus-visible { outline: 3px solid #713e68; outline-offset: 4px; }
+
+    .help {
+      margin: 14px 0 0;
+      color: #9a6d91;
+      font-size: .9rem;
+    }
+
+    .leaderboard {
+      margin-top: 20px;
+      padding: 18px;
+      border: 3px solid #fff;
+      border-radius: 22px;
+      background: #f8feffed;
+      box-shadow: 0 8px 22px #167d9b24;
+      text-align: left;
+    }
+
+    .leaderboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 5px;
+    }
+
+    .leaderboard h2 {
+      margin: 0;
+      color: #247e97;
+      font-size: 1.2rem;
+    }
+
+    .leaderboard-refresh {
+      padding: 7px 12px;
+      color: #39738a;
+      background: #e4faff;
+      box-shadow: 0 3px 0 #b8e3ed;
+      font-size: .85rem;
+    }
+
+    .leaderboard-status {
+      min-height: 1.3em;
+      margin: 0 0 10px;
+      color: #678694;
+      font-size: .82rem;
+      overflow-wrap: anywhere;
+    }
+
+    .leaderboard-status[data-state="error"] { color: #a94364; }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #e9f8fb;
+      color: #355b69;
+      font-size: .92rem;
+    }
+
+    .leaderboard-rank { color: #d76598; font-weight: 800; }
+    .leaderboard-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .leaderboard-score { color: #247e97; font-weight: 800; }
+
+    @media (max-height: 760px) {
+      body { padding-block: 10px; }
+      .game-shell { width: min(100%, 380px); }
+      .help { margin-top: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <h1>Flappy Shark</h1>
+    <div class="game-frame">
+      <canvas id="game" width="400" height="600" aria-label="Flappy Shark game. Tap, click, or press Space to swim." role="img"></canvas>
+      <div class="overlay" id="overlay">
+        <section class="card" aria-live="polite">
+          <h2 id="message-title">Ready to swim?</h2>
+          <p id="message-copy">Choose a name to join the leaderboard.</p>
+          <form id="join-form">
+            <label class="sr-only" for="player-name">Your player name</label>
+            <input id="player-name" name="player-name" type="text" maxlength="16" minlength="1" autocomplete="nickname" placeholder="Enter Your Name" required>
+            <button id="start-button" type="submit">Join &amp; Play!</button>
+          </form>
+        </section>
+      </div>
+      <div class="game-menu">
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open game menu" aria-expanded="false" aria-controls="menu-actions">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div id="menu-actions" class="menu-actions" hidden>
+          <button id="restart-button" type="button" aria-label="Restart game" title="Restart">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 7v5h-5M4.8 9A7.5 7.5 0 0 1 18 6.5L20 12M4 17v-5h5m10.2 3A7.5 7.5 0 0 1 6 17.5L4 12"></path>
+            </svg>
+          </button>
+          <button id="continue-button" type="button" aria-label="Continue game" title="Continue">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="icon-fill" d="M7 4.8a1 1 0 0 1 1.5-.86l11 6.35a2 2 0 0 1 0 3.46l-11 6.35A1 1 0 0 1 7 19.24z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <p class="help">Tap, click, or press <strong>Space</strong> to flap</p>
+    <section class="leaderboard" aria-labelledby="leaderboard-title">
+      <div class="leaderboard-header">
+        <h2 id="leaderboard-title">🏆 High Scores</h2>
+        <button id="refresh-leaderboard" class="leaderboard-refresh" type="button">Refresh</button>
+      </div>
+      <p id="leaderboard-status" class="leaderboard-status" role="status" aria-live="polite">Connecting to the shared leaderboard…</p>
+      <ol id="leaderboard-list" class="leaderboard-list"></ol>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const overlay = document.querySelector("#overlay");
+      const title = document.querySelector("#message-title");
+      const copy = document.querySelector("#message-copy");
+      const startButton = document.querySelector("#start-button");
+      const joinForm = document.querySelector("#join-form");
+      const playerNameInput = document.querySelector("#player-name");
+      const continueButton = document.querySelector("#continue-button");
+      const restartButton = document.querySelector("#restart-button");
+      const menuToggle = document.querySelector("#menu-toggle");
+      const menuActions = document.querySelector("#menu-actions");
+      const leaderboardStatus = document.querySelector("#leaderboard-status");
+      const leaderboardList = document.querySelector("#leaderboard-list");
+      const refreshLeaderboardButton = document.querySelector("#refresh-leaderboard");
+      const SUPABASE_URL = "https://mfbhitorvokvbfuvvmvn.supabase.co";
+      const SUPABASE_ANON_KEY = "sb_publishable_oQWXf_mPfNg9lbFRFKJATQ_B-VSjPZ1";
+      const PLAYER_ID_KEY = "flappySharkPlayerId";
+      const PLAYER_NAME_KEY = "flappySharkPlayerName";
+      const W = canvas.width;
+      const H = canvas.height;
+      const floorY = H - 48;
+      const shark = { x: 105, y: 280, vy: 0, size: 21 };
+      const gateWidth = 46;
+      const gapHeight = 170;
+      let gates = [];
+      let score = 0;
+      let best = readBest();
+      let state = "ready";
+      let lastTime = 0;
+      let elapsed = 0;
+      let playerName = readStoredValue(PLAYER_NAME_KEY);
+      let playerId = getPlayerId();
+      const bubbles = [
+        { x: 46, y: 104, radius: 5 }, { x: 73, y: 256, radius: 3 },
+        { x: 344, y: 95, radius: 6 }, { x: 305, y: 188, radius: 3 },
+        { x: 227, y: 145, radius: 4 }, { x: 145, y: 372, radius: 5 },
+        { x: 370, y: 390, radius: 3 }, { x: 44, y: 455, radius: 4 }
+      ];
+
+      function readBest() {
+        try { return Number(localStorage.getItem("flappySharkBest")) || 0; }
+        catch { return 0; }
+      }
+
+      function readStoredValue(key) {
+        try { return localStorage.getItem(key) || ""; }
+        catch { return ""; }
+      }
+
+      function getPlayerId() {
+        let id = readStoredValue(PLAYER_ID_KEY);
+        if (id) return id;
+        id = `shark-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+        try { localStorage.setItem(PLAYER_ID_KEY, id); }
+        catch { /* The current session can still play without persistent identity. */ }
+        return id;
+      }
+
+      function saveBest() {
+        try { localStorage.setItem("flappySharkBest", String(best)); }
+        catch { /* The game still works if browser storage is unavailable. */ }
+      }
+
+      function hasSupabaseConfig() {
+        return /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(SUPABASE_URL)
+          && SUPABASE_ANON_KEY.length > 20
+          && !SUPABASE_ANON_KEY.includes("YOUR_");
+      }
+
+      function setLeaderboardStatus(message, stateName = "info") {
+        leaderboardStatus.textContent = message;
+        leaderboardStatus.dataset.state = stateName;
+      }
+
+      async function supabaseRequest(path, options = {}) {
+        const response = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${path}`, {
+          ...options,
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+            ...options.headers
+          }
+        });
+        if (!response.ok) {
+          const detail = await response.text();
+          if (detail.includes("PGRST205") || detail.includes("42P01")) {
+            throw new Error("The score table is missing. Run supabase-setup.sql in your Supabase SQL Editor.");
+          }
+          if (response.status === 401 || response.status === 403) {
+            throw new Error("Supabase rejected the public key or table permissions. Check the project key and setup SQL.");
+          }
+          throw new Error(`Leaderboard request failed (${response.status}): ${detail || response.statusText}`);
+        }
+        if (response.status === 204) return null;
+        return response.json();
+      }
+
+      function renderLeaderboard(rows) {
+        leaderboardList.replaceChildren();
+        for (const [index, row] of rows.entries()) {
+          const item = document.createElement("li");
+          item.className = "leaderboard-row";
+          const rank = document.createElement("span");
+          rank.className = "leaderboard-rank";
+          rank.textContent = `${index + 1}.`;
+          const name = document.createElement("span");
+          name.className = "leaderboard-name";
+          name.textContent = `${row.player_name}${row.player_id === playerId ? " (you)" : ""}`;
+          const scoreValue = document.createElement("span");
+          scoreValue.className = "leaderboard-score";
+          scoreValue.textContent = String(row.high_score);
+          item.append(rank, name, scoreValue);
+          leaderboardList.append(item);
+        }
+      }
+
+      async function loadLeaderboard() {
+        if (!hasSupabaseConfig()) {
+          setLeaderboardStatus("Connect a Supabase project to enable the shared leaderboard.");
+          return;
+        }
+        setLeaderboardStatus("Loading the top swimmers…");
+        try {
+          const rows = await supabaseRequest(
+            "flappy_shark_scores?select=player_id,player_name,high_score&order=high_score.desc,player_name.asc&limit=10"
+          );
+          renderLeaderboard(rows);
+          setLeaderboardStatus(rows.length ? "" : "No scores yet—be the first to swim!");
+        } catch (error) {
+          setLeaderboardStatus(error.message, "error");
+        }
+      }
+
+      async function publishScore(name, scoreToPublish) {
+        if (!hasSupabaseConfig()) {
+          setLeaderboardStatus("Add your Supabase project URL and anon key in index.html to share scores.");
+          return;
+        }
+        await supabaseRequest("flappy_shark_scores?on_conflict=player_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({
+            player_id: playerId,
+            player_name: name,
+            high_score: scoreToPublish
+          })
+        });
+        await loadLeaderboard();
+      }
+
+      function reset() {
+        score = 0;
+        shark.y = 280;
+        shark.vy = 0;
+        gates = [
+          { x: 285, gapY: 235, phase: .4, scored: false },
+          { x: 500, gapY: 350, phase: 2.1, scored: false }
+        ];
+        elapsed = 0;
+      }
+
+      function begin() {
+        if (!playerName) {
+          overlay.hidden = false;
+          playerNameInput.focus();
+          return;
+        }
+        reset();
+        state = "playing";
+        copy.textContent = "";
+        overlay.hidden = true;
+        setMenuOpen(false);
+        flap();
+      }
+
+      function setMenuOpen(open) {
+        menuActions.hidden = !open;
+        menuToggle.setAttribute("aria-expanded", String(open));
+        menuToggle.setAttribute("aria-label", open ? "Close game menu" : "Open game menu");
+      }
+
+      function togglePause() {
+        if (state === "playing") {
+          state = "paused";
+          title.textContent = "Paused";
+          copy.textContent = "Your shark is taking a little break.";
+          startButton.textContent = "Resume swimming";
+          overlay.hidden = false;
+        } else if (state === "paused") {
+          state = "playing";
+          overlay.hidden = true;
+        } else {
+          return;
+        }
+      }
+
+      function flap() {
+        if (state !== "playing") return;
+        shark.vy = -390;
+      }
+
+      function endGame() {
+        if (state !== "playing") return;
+        state = "over";
+        if (score > best) {
+          best = score;
+          saveBest();
+        }
+        title.textContent = "Swim again?";
+        copy.textContent = `You swam through ${score} ${score === 1 ? "gate" : "gates"}! Best: ${best}`;
+        startButton.textContent = "Play again";
+        overlay.hidden = false;
+        if (playerName) {
+          publishScore(playerName, best).catch(error => setLeaderboardStatus(error.message, "error"));
+        }
+      }
+
+      function roundedRect(x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+        ctx.fill();
+      }
+
+      function drawBubble(x, y, radius) {
+        ctx.strokeStyle = "#d8f8ff99";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#effdff8c";
+        ctx.beginPath();
+        ctx.arc(x - radius * .3, y - radius * .3, Math.max(1, radius * .2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawBackgroundFish(x, y, scale, color) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 17, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-14, 0);
+        ctx.lineTo(-25, -9);
+        ctx.lineTo(-23, 0);
+        ctx.lineTo(-25, 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-2, -6);
+        ctx.lineTo(5, -12);
+        ctx.lineTo(9, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#d7faff";
+        ctx.beginPath();
+        ctx.arc(10, -2, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawWaterCaustics() {
+        ctx.save();
+        ctx.strokeStyle = "#d2fbff2c";
+        ctx.lineWidth = 2;
+        for (let row = 0; row < 3; row++) {
+          const y = 110 + row * 125;
+          ctx.beginPath();
+          ctx.moveTo(-15, y);
+          ctx.bezierCurveTo(55, y - 24, 105, y + 23, 170, y);
+          ctx.bezierCurveTo(245, y - 22, 300, y + 21, 415, y - 4);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawSeaweed(x, height, color, phase) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x, floorY + 3);
+        ctx.bezierCurveTo(x - 15, floorY - height * .35, x + 17, floorY - height * .65, x + Math.sin(phase) * 12, floorY - height);
+        ctx.stroke();
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + 7, floorY + 3);
+        ctx.bezierCurveTo(x + 19, floorY - height * .28, x - 12, floorY - height * .62, x - 7, floorY - height * .8);
+        ctx.stroke();
+      }
+
+      function drawSeafloor() {
+        const deepWater = ctx.createLinearGradient(0, floorY - 16, 0, H);
+        deepWater.addColorStop(0, "#0b6177");
+        deepWater.addColorStop(.45, "#084f69");
+        deepWater.addColorStop(1, "#063f58");
+        ctx.fillStyle = deepWater;
+        ctx.fillRect(0, floorY, W, H - floorY);
+        ctx.fillStyle = "#147486";
+        ctx.beginPath();
+        ctx.moveTo(0, floorY + 17);
+        ctx.quadraticCurveTo(100, floorY - 4, 200, floorY + 12);
+        ctx.quadraticCurveTo(300, floorY + 27, W, floorY + 8);
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fill();
+        const sand = ctx.createLinearGradient(0, floorY + 13, 0, H);
+        sand.addColorStop(0, "#c8b18f");
+        sand.addColorStop(.45, "#b99b78");
+        sand.addColorStop(1, "#967c66");
+        ctx.fillStyle = sand;
+        ctx.beginPath();
+        ctx.moveTo(0, floorY + 24);
+        ctx.quadraticCurveTo(70, floorY + 10, 145, floorY + 25);
+        ctx.quadraticCurveTo(240, floorY + 42, 315, floorY + 21);
+        ctx.quadraticCurveTo(360, floorY + 11, W, floorY + 24);
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "#f3dbb57a";
+        ctx.lineWidth = 2;
+        for (let ripple = 0; ripple < 3; ripple++) {
+          const y = floorY + 34 + ripple * 9;
+          ctx.beginPath();
+          ctx.moveTo(25 + ripple * 8, y);
+          ctx.quadraticCurveTo(72 + ripple * 8, y - 5, 120 + ripple * 8, y);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#e5cb9a";
+        for (const shell of [{ x: 162, y: floorY + 37 }, { x: 287, y: floorY + 44 }]) {
+          ctx.beginPath();
+          ctx.ellipse(shell.x, shell.y, 4, 2.5, -.2, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#8c806d";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#72c5cf18";
+        ctx.fillRect(0, floorY + 13, W, H - floorY - 13);
+        drawSeaweed(25, 82, "#3d9b84", 1);
+        drawSeaweed(370, 97, "#348f7e", 2);
+        drawSeaweed(335, 54, "#57aa88", 3);
+      }
+
+      function drawGate(gate) {
+        const topHeight = gate.gapY - gapHeight / 2;
+        const bottomY = gate.gapY + gapHeight / 2;
+        const centerX = gate.x + gateWidth / 2;
+        const pinks = ["#ee8bb6", "#f7b0ce", "#e982ae"];
+        drawAlgaeStem(centerX, -8, topHeight, gate.phase, pinks);
+        drawAlgaeStem(centerX, floorY, bottomY, gate.phase + 1.4, pinks);
+      }
+
+      function drawAlgaeLeaf(x, y, direction, size, color) {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#c75d91";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + direction * size * .5, y - size * .95, x + direction * size, y - size * .78);
+        ctx.quadraticCurveTo(x + direction * size * .85, y - size * .2, x, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "#ffe1edb8";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + direction * size * .45, y - size * .5, x + direction * size * .8, y - size * .7);
+        ctx.stroke();
+      }
+
+      function drawAlgaeStem(centerX, anchorY, gapEdgeY, phase, pinks) {
+        const towardGap = Math.sign(gapEdgeY - anchorY);
+        const stemEnd = gapEdgeY - towardGap * 7;
+        const stemLength = Math.abs(stemEnd - anchorY);
+        const gradient = ctx.createLinearGradient(centerX - 10, 0, centerX + 18, 0);
+        gradient.addColorStop(0, pinks[0]);
+        gradient.addColorStop(.55, pinks[1]);
+        gradient.addColorStop(1, pinks[2]);
+
+        const strands = [
+          { offset: 0, width: 8, length: 1, bend: -1 },
+          { offset: 9, width: 5, length: .84, bend: 1 }
+        ];
+        for (const strand of strands) {
+          const endY = anchorY + (stemEnd - anchorY) * strand.length;
+          ctx.beginPath();
+          ctx.moveTo(centerX + strand.offset, anchorY);
+          ctx.bezierCurveTo(
+            centerX + strand.offset + strand.bend * 14,
+            anchorY + (endY - anchorY) * .35,
+            centerX + strand.offset - strand.bend * 13,
+            anchorY + (endY - anchorY) * .72,
+            centerX + strand.offset + Math.sin(phase + strand.bend) * 8,
+            endY
+          );
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = strand.width;
+          ctx.lineCap = "round";
+          ctx.stroke();
+        }
+
+        const leafCount = Math.max(2, Math.floor(stemLength / 76));
+        for (let i = 0; i < leafCount; i++) {
+          const t = (i + .6) / (leafCount + .1);
+          const y = anchorY + (stemEnd - anchorY) * t;
+          const x = centerX + Math.sin(phase + t * 2) * 6;
+          const size = 12 + (i % 2) * 2;
+          drawAlgaeLeaf(x - 2, y, -1, size, pinks[i % pinks.length]);
+          drawAlgaeLeaf(x + 5, y - 13, 1, size, pinks[(i + 1) % pinks.length]);
+        }
+      }
+
+      function drawShark(x, y, angle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.max(-.35, Math.min(.5, angle)));
+        ctx.scale(.74, .74);
+
+        const outline = "#39495a";
+        const body = "#7894ad";
+        const fin = "#637f99";
+        ctx.lineWidth = 2.8;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.strokeStyle = outline;
+
+        ctx.fillStyle = fin;
+        ctx.beginPath();
+        ctx.moveTo(-25, -3);
+        ctx.lineTo(-34, -26);
+        ctx.lineTo(-31, -6);
+        ctx.lineTo(-48, -17);
+        ctx.lineTo(-40, 0);
+        ctx.lineTo(-48, 17);
+        ctx.lineTo(-31, 6);
+        ctx.lineTo(-34, 25);
+        ctx.lineTo(-24, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.moveTo(-20, -9);
+        ctx.lineTo(-10, -12);
+        ctx.lineTo(-3, -34);
+        ctx.lineTo(8, -12);
+        ctx.quadraticCurveTo(25, -14, 38, -3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = fin;
+        ctx.beginPath();
+        ctx.moveTo(-4, 4);
+        ctx.quadraticCurveTo(-3, 12, 4, 26);
+        ctx.quadraticCurveTo(15, 25, 20, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(14, 4);
+        ctx.quadraticCurveTo(29, 6, 34, 18);
+        ctx.quadraticCurveTo(23, 20, 12, 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.moveTo(-29, -4);
+        ctx.quadraticCurveTo(-27, -18, -12, -19);
+        ctx.quadraticCurveTo(3, -26, 17, -19);
+        ctx.quadraticCurveTo(30, -14, 39, -3);
+        ctx.quadraticCurveTo(43, -1, 40, 2);
+        ctx.quadraticCurveTo(27, 13, 11, 18);
+        ctx.quadraticCurveTo(-9, 21, -25, 8);
+        ctx.quadraticCurveTo(-32, 1, -29, -4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = outline;
+        ctx.stroke();
+
+        ctx.fillStyle = "#e2e8ec";
+        ctx.beginPath();
+        ctx.moveTo(40, 1);
+        ctx.quadraticCurveTo(24, 16, 11, 18);
+        ctx.quadraticCurveTo(-9, 21, -24, 9);
+        ctx.quadraticCurveTo(-10, 12, 1, 9);
+        ctx.quadraticCurveTo(21, 7, 40, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff70";
+        ctx.beginPath();
+        ctx.ellipse(-8, -14, 10, 2.5, -.16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f08caa";
+        ctx.beginPath();
+        ctx.ellipse(17, 1, 4.2, 2.6, -.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#626a75";
+        ctx.lineWidth = 1.3;
+        for (let gill = 0; gill < 3; gill++) {
+          const gx = 4 + gill * 3;
+          ctx.beginPath();
+          ctx.moveTo(gx, -4);
+          ctx.quadraticCurveTo(gx - 1.5, 0, gx, 4);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#17191d";
+        ctx.beginPath();
+        ctx.arc(24, -6, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(24.8, -6.9, .8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(32, 1);
+        ctx.quadraticCurveTo(37, 3, 42, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = "#fff";
+        for (let tooth = 0; tooth < 4; tooth++) {
+          const tx = 33 + tooth * 2;
+          ctx.beginPath();
+          ctx.moveTo(tx, 1.6);
+          ctx.lineTo(tx + 1.7, 1.7);
+          ctx.lineTo(tx + .9, 4.1);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = outline;
+          ctx.lineWidth = .6;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function draw() {
+        const ocean = ctx.createLinearGradient(0, 0, 0, H);
+        ocean.addColorStop(0, "#4ebbd4");
+        ocean.addColorStop(.4, "#137f9d");
+        ocean.addColorStop(1, "#084b66");
+        ctx.fillStyle = ocean;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = "#d5fbff20";
+        ctx.beginPath();
+        ctx.moveTo(78, 0);
+        ctx.lineTo(166, 0);
+        ctx.lineTo(260, floorY);
+        ctx.lineTo(176, floorY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(250, 0);
+        ctx.lineTo(302, 0);
+        ctx.lineTo(370, floorY);
+        ctx.lineTo(318, floorY);
+        ctx.closePath();
+        ctx.fill();
+        drawWaterCaustics();
+        drawBackgroundFish(95 + Math.sin(elapsed / 1500) * 8, 184, .72, "#b8edf52d");
+        drawBackgroundFish(314 - Math.sin(elapsed / 1750) * 10, 321, .55, "#b8edf529");
+        drawBackgroundFish(241 + Math.sin(elapsed / 1900) * 6, 116, .42, "#b8edf527");
+        bubbles.forEach((bubble, index) => {
+          const y = (bubble.y - elapsed * (.012 + index * .001) % (H + 30) + H + 30) % (H + 30) - 15;
+          drawBubble(bubble.x + Math.sin(elapsed / 1000 + index) * 3, y, bubble.radius);
+        });
+
+        ctx.fillStyle = "#b5f7ff14";
+        ctx.beginPath();
+        ctx.ellipse(330, 275, 84, 37, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(30, 392, 100, 39, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        drawSeafloor();
+        gates.forEach(drawGate);
+
+        drawShark(shark.x, shark.y, shark.vy / 900);
+
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.font = "bold 42px Trebuchet MS, Arial, sans-serif";
+        ctx.fillText(String(score), W / 2, 70);
+        ctx.font = "bold 13px Trebuchet MS, Arial, sans-serif";
+        ctx.fillStyle = "#d9f9ff";
+        ctx.fillText(`BEST ${best}`, W / 2, 92);
+
+        if (state === "ready") {
+          ctx.fillStyle = "#e2fbff";
+          ctx.font = "bold 15px Trebuchet MS, Arial, sans-serif";
+          ctx.fillText("YOUR SHARK IS READY!", W / 2, 490);
+        }
+      }
+
+      function update(dt) {
+        if (state !== "playing") {
+          if (state === "ready") shark.y = 280 + Math.sin(elapsed / 260) * 8;
+          return;
+        }
+
+        shark.vy += 1250 * dt;
+        shark.y += shark.vy * dt;
+
+        const speed = 155 + Math.min(score * 3, 60);
+        for (const gate of gates) {
+          gate.x -= speed * dt;
+          if (!gate.scored && gate.x + gateWidth < shark.x) {
+            gate.scored = true;
+            score += 1;
+          }
+
+          const overlapsX = shark.x + shark.size - 5 > gate.x - 4 && shark.x - shark.size + 5 < gate.x + gateWidth + 4;
+          const outsideGap = shark.y - shark.size + 4 < gate.gapY - gapHeight / 2
+            || shark.y + shark.size - 4 > gate.gapY + gapHeight / 2;
+          if (overlapsX && outsideGap) endGame();
+        }
+
+        if (gates[0].x + gateWidth < -10) {
+          gates.shift();
+          const previous = gates[gates.length - 1];
+          const minGap = 150;
+          const maxGap = floorY - 115;
+          const gapY = Math.max(minGap, Math.min(maxGap, previous.gapY + (Math.random() * 170 - 85)));
+          gates.push({ x: previous.x + 215, gapY, phase: previous.phase + 1.7, scored: false });
+        }
+
+        if (shark.y - shark.size < 0 || shark.y + shark.size > floorY) endGame();
+      }
+
+      function frame(time) {
+        const dt = Math.min((time - (lastTime || time)) / 1000, .04);
+        lastTime = time;
+        elapsed += dt * 1000;
+        update(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      playerNameInput.value = playerName;
+
+      joinForm.addEventListener("submit", event => {
+        event.preventDefault();
+        if (state === "paused") {
+          togglePause();
+          return;
+        }
+
+        const name = playerNameInput.value.trim();
+        if (!name) {
+          playerNameInput.setCustomValidity("Please enter a name to join the leaderboard.");
+          playerNameInput.reportValidity();
+          return;
+        }
+        playerNameInput.setCustomValidity("");
+        playerName = name;
+        try { localStorage.setItem(PLAYER_NAME_KEY, playerName); }
+        catch { /* The player can still play and submit scores this session. */ }
+        begin();
+        publishScore(playerName, best).catch(error => setLeaderboardStatus(error.message, "error"));
+      });
+
+      playerNameInput.addEventListener("input", () => playerNameInput.setCustomValidity(""));
+
+      canvas.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        if (state === "ready" || state === "over") {
+          if (!playerName) playerNameInput.focus();
+          else begin();
+        } else {
+          flap();
+        }
+      });
+
+      menuToggle.addEventListener("click", () => {
+        if (menuActions.hidden) {
+          if (state === "playing") {
+            state = "paused";
+            title.textContent = "Paused";
+            copy.textContent = "Your shark is taking a little break.";
+            startButton.textContent = "Resume swimming";
+          }
+          if (state === "paused") overlay.hidden = true;
+          setMenuOpen(true);
+        } else {
+          setMenuOpen(false);
+          if (state === "paused") overlay.hidden = false;
+        }
+      });
+      continueButton.addEventListener("click", () => {
+        if (state === "paused") {
+          state = "playing";
+          overlay.hidden = true;
+        }
+        setMenuOpen(false);
+      });
+      restartButton.addEventListener("click", () => {
+        begin();
+        setMenuOpen(false);
+      });
+      window.addEventListener("keydown", event => {
+        if (event.target instanceof HTMLElement && event.target.closest("input, textarea, button")) return;
+        if (event.code === "Escape" && !menuActions.hidden) {
+          setMenuOpen(false);
+          menuToggle.focus();
+          return;
+        }
+        if (event.code === "KeyP") {
+          event.preventDefault();
+          setMenuOpen(false);
+          togglePause();
+          return;
+        }
+        if (event.code !== "Space" && event.code !== "ArrowUp") return;
+        event.preventDefault();
+        if (state === "ready" || state === "over") begin();
+        else if (state === "paused") {
+          setMenuOpen(false);
+          togglePause();
+        }
+        else flap();
+      });
+
+      reset();
+      refreshLeaderboardButton.addEventListener("click", () => loadLeaderboard());
+      loadLeaderboard();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
