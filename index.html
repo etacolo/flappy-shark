@@ -391,7 +391,6 @@
       const floorY = H - 48;
       const shark = { x: 105, y: 280, vy: 0, size: 21 };
       const gateWidth = 46;
-      const gapHeight = 170;
       let gates = [];
       let score = 0;
       let best = readBest();
@@ -528,11 +527,26 @@
         score = 0;
         shark.y = 280;
         shark.vy = 0;
-        gates = [
-          { x: 285, gapY: 235, phase: .4, scored: false },
-          { x: 500, gapY: 350, phase: 2.1, scored: false }
-        ];
+        gates = [createGate(285)];
+        gates.push(createGate(500, gates[0].gapY, gates[0].phase));
         elapsed = 0;
+      }
+
+      function createGate(x, previousGapY = null, previousPhase = 0) {
+        const gateHeight = Math.max(130, 155 - Math.floor(score / 5) * 5);
+        const minGapY = gateHeight / 2 + shark.size + 25;
+        const maxGapY = floorY - gateHeight / 2 - shark.size - 25;
+        let gapY = minGapY + Math.random() * (maxGapY - minGapY);
+        for (let attempt = 0; previousGapY !== null && Math.abs(gapY - previousGapY) < 85 && attempt < 12; attempt++) {
+          gapY = minGapY + Math.random() * (maxGapY - minGapY);
+        }
+        return {
+          x,
+          gapY,
+          gapHeight: gateHeight,
+          phase: Math.random() * Math.PI * 2 + previousPhase,
+          scored: false
+        };
       }
 
       function begin() {
@@ -732,8 +746,8 @@
       }
 
       function drawGate(gate) {
-        const topHeight = gate.gapY - gapHeight / 2;
-        const bottomY = gate.gapY + gapHeight / 2;
+        const topHeight = gate.gapY - gate.gapHeight / 2;
+        const bottomY = gate.gapY + gate.gapHeight / 2;
         const centerX = gate.x + gateWidth / 2;
         const pinks = ["#ee8bb6", "#f7b0ce", "#e982ae"];
         drawAlgaeStem(centerX, -8, topHeight, gate.phase, pinks);
@@ -1004,7 +1018,7 @@
         shark.vy += 1250 * dt;
         shark.y += shark.vy * dt;
 
-        const speed = 155 + Math.min(score * 3, 60);
+        const speed = 175 + Math.min(score * 4, 100);
         for (const gate of gates) {
           gate.x -= speed * dt;
           if (!gate.scored && gate.x + gateWidth < shark.x) {
@@ -1013,18 +1027,16 @@
           }
 
           const overlapsX = shark.x + shark.size - 5 > gate.x - 4 && shark.x - shark.size + 5 < gate.x + gateWidth + 4;
-          const outsideGap = shark.y - shark.size + 4 < gate.gapY - gapHeight / 2
-            || shark.y + shark.size - 4 > gate.gapY + gapHeight / 2;
+          const outsideGap = shark.y - shark.size + 4 < gate.gapY - gate.gapHeight / 2
+            || shark.y + shark.size - 4 > gate.gapY + gate.gapHeight / 2;
           if (overlapsX && outsideGap) endGame();
         }
 
         if (gates[0].x + gateWidth < -10) {
           gates.shift();
           const previous = gates[gates.length - 1];
-          const minGap = 150;
-          const maxGap = floorY - 115;
-          const gapY = Math.max(minGap, Math.min(maxGap, previous.gapY + (Math.random() * 170 - 85)));
-          gates.push({ x: previous.x + 215, gapY, phase: previous.phase + 1.7, scored: false });
+          const nextX = previous.x + 185 + Math.random() * 65;
+          gates.push(createGate(nextX, previous.gapY, previous.phase));
         }
 
         if (shark.y - shark.size < 0 || shark.y + shark.size > floorY) endGame();
