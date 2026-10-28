@@ -1064,6 +1064,14 @@
 
       playerNameInput.addEventListener("input", () => playerNameInput.setCustomValidity(""));
 
+      let lastGameTouchEnd = 0;
+      document.addEventListener("touchend", event => {
+        if (!(event.target instanceof Element) || !event.target.closest(".game-frame")) return;
+        const now = performance.now();
+        if (now - lastGameTouchEnd < 350 && event.cancelable) event.preventDefault();
+        lastGameTouchEnd = now;
+      }, { capture: true, passive: false });
+
       canvas.addEventListener("pointerdown", event => {
         event.preventDefault();
         if (state === "ready") {
