@@ -74,6 +74,13 @@
 
     .overlay[hidden] { display: none; }
 
+    .overlay.restart-only .card h2,
+    .overlay.restart-only #message-copy,
+    .overlay.restart-only #join-form label,
+    .overlay.restart-only #player-name {
+      display: none;
+    }
+
     .game-menu {
       position: absolute;
       z-index: 3;
@@ -385,6 +392,7 @@
       let elapsed = 0;
       let playerName = readStoredValue(PLAYER_NAME_KEY);
       let playerId = getPlayerId();
+      let leaderboardLoading = false;
       const bubbles = [
         { x: 46, y: 104, radius: 5 }, { x: 73, y: 256, radius: 3 },
         { x: 344, y: 95, radius: 6 }, { x: 305, y: 188, radius: 3 },
@@ -469,12 +477,14 @@
         }
       }
 
-      async function loadLeaderboard() {
+      async function loadLeaderboard(showLoading = false) {
         if (!hasSupabaseConfig()) {
           setLeaderboardStatus("Connect a Supabase project to enable the shared leaderboard.");
           return;
         }
-        setLeaderboardStatus("Loading the top swimmers…");
+        if (leaderboardLoading) return;
+        leaderboardLoading = true;
+        if (showLoading) setLeaderboardStatus("Loading scores…");
         try {
           const rows = await supabaseRequest(
             "flappy_shark_scores?select=player_id,player_name,high_score&order=high_score.desc,player_name.asc&limit=10"
@@ -482,7 +492,10 @@
           renderLeaderboard(rows);
           setLeaderboardStatus(rows.length ? "" : "No scores yet—be the first to swim!");
         } catch (error) {
-          setLeaderboardStatus(error.message, "error");
+          console.error("Could not refresh the Flappy Shark leaderboard:", error);
+          setLeaderboardStatus("Could not update scores. Retrying automatically…", "error");
+        } finally {
+          leaderboardLoading = false;
         }
       }
 
@@ -522,6 +535,7 @@
         }
         reset();
         state = "playing";
+        overlay.classList.remove("restart-only");
         copy.textContent = "";
         overlay.hidden = true;
         setMenuOpen(false);
@@ -537,6 +551,7 @@
       function togglePause() {
         if (state === "playing") {
           state = "paused";
+          overlay.classList.remove("restart-only");
           title.textContent = "Paused";
           copy.textContent = "Your shark is taking a little break.";
           startButton.textContent = "Resume swimming";
@@ -564,6 +579,7 @@
         title.textContent = "Swim again?";
         copy.textContent = `You swam through ${score} ${score === 1 ? "gate" : "gates"}! Best: ${best}`;
         startButton.textContent = "Play again";
+        overlay.classList.add("restart-only");
         overlay.hidden = false;
         if (playerName) {
           publishScore(playerName, best).catch(error => setLeaderboardStatus(error.message, "error"));
@@ -1097,8 +1113,14 @@
       });
 
       reset();
-      refreshLeaderboardButton.addEventListener("click", () => loadLeaderboard());
-      loadLeaderboard();
+      refreshLeaderboardButton.addEventListener("click", () => loadLeaderboard(true));
+      window.setInterval(() => {
+        if (!document.hidden) loadLeaderboard();
+      }, 5000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) loadLeaderboard();
+      });
+      loadLeaderboard(true);
       requestAnimationFrame(frame);
     })();
   </script>
