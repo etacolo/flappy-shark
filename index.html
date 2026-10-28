@@ -76,11 +76,17 @@
 
     .overlay[hidden] { display: none; }
 
-    .overlay.restart-only .card h2,
-    .overlay.restart-only #message-copy,
     .overlay.restart-only #join-form label,
     .overlay.restart-only #player-name {
       display: none;
+    }
+
+    .overlay.game-over .card {
+      pointer-events: none;
+    }
+
+    .overlay.game-over #start-button {
+      pointer-events: auto;
     }
 
     .game-menu {
@@ -538,6 +544,7 @@
         reset();
         state = "playing";
         overlay.classList.remove("restart-only");
+        overlay.classList.remove("game-over");
         copy.textContent = "";
         overlay.hidden = true;
         setMenuOpen(false);
@@ -554,6 +561,7 @@
         if (state === "playing") {
           state = "paused";
           overlay.classList.remove("restart-only");
+          overlay.classList.remove("game-over");
           title.textContent = "Paused";
           copy.textContent = "Your shark is taking a little break.";
           startButton.textContent = "Resume swimming";
@@ -582,6 +590,7 @@
         copy.textContent = `You swam through ${score} ${score === 1 ? "gate" : "gates"}! Best: ${best}`;
         startButton.textContent = "Play again";
         overlay.classList.add("restart-only");
+        overlay.classList.add("game-over");
         overlay.hidden = false;
         if (playerName) {
           publishScore(playerName, best).catch(error => setLeaderboardStatus(error.message, "error"));
@@ -1057,12 +1066,11 @@
 
       canvas.addEventListener("pointerdown", event => {
         event.preventDefault();
-        if (state === "ready" || state === "over") {
+        if (state === "ready") {
           if (!playerName) playerNameInput.focus();
           else begin();
-        } else {
-          flap();
-        }
+        } else if (state === "over") return;
+        else flap();
       });
 
       menuToggle.addEventListener("click", () => {
