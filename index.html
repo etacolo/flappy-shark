@@ -397,6 +397,7 @@
       let state = "ready";
       let lastTime = 0;
       let elapsed = 0;
+      let countdownEndsAt = 0;
       let playerName = readStoredValue(PLAYER_NAME_KEY);
       let playerId = getPlayerId();
       let leaderboardLoading = false;
@@ -556,7 +557,8 @@
           return;
         }
         reset();
-        state = "playing";
+        state = "countdown";
+        countdownEndsAt = performance.now() + 3000;
         overlay.classList.remove("restart-only");
         overlay.classList.remove("game-over");
         copy.textContent = "";
@@ -1007,11 +1009,33 @@
           ctx.font = "bold 15px Trebuchet MS, Arial, sans-serif";
           ctx.fillText("YOUR SHARK IS READY!", W / 2, 490);
         }
+
+        if (state === "countdown") {
+          const secondsLeft = Math.ceil((countdownEndsAt - performance.now()) / 1000);
+          ctx.fillStyle = "#073e59a8";
+          ctx.beginPath();
+          ctx.roundRect(W / 2 - 68, H / 2 - 80, 136, 160, 28);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 96px Trebuchet MS, Arial, sans-serif";
+          ctx.fillText(String(Math.max(1, secondsLeft)), W / 2, H / 2 + 25);
+          ctx.fillStyle = "#d9f9ff";
+          ctx.font = "bold 16px Trebuchet MS, Arial, sans-serif";
+          ctx.fillText("GET READY!", W / 2, H / 2 + 56);
+        }
       }
 
       function update(dt) {
+        if (state === "countdown") {
+          if (performance.now() >= countdownEndsAt) {
+            state = "playing";
+            flap();
+          }
+          return;
+        }
+
         if (state !== "playing") {
-          if (state === "ready") shark.y = 280 + Math.sin(elapsed / 260) * 8;
+          if (state === "ready" || state === "start") shark.y = 280 + Math.sin(elapsed / 260) * 8;
           return;
         }
 
@@ -1059,6 +1083,10 @@
           togglePause();
           return;
         }
+        if (state === "start") {
+          begin();
+          return;
+        }
 
         const name = playerNameInput.value.trim();
         if (!name) {
@@ -1070,7 +1098,16 @@
         playerName = name;
         try { localStorage.setItem(PLAYER_NAME_KEY, playerName); }
         catch { /* The player can still play and submit scores this session. */ }
-        begin();
+        if (state === "over") {
+          begin();
+        } else {
+          state = "start";
+          title.textContent = "Ready to swim?";
+          copy.textContent = "Press Start when you're ready.";
+          startButton.textContent = "Start";
+          overlay.classList.remove("restart-only", "game-over");
+          overlay.hidden = false;
+        }
         publishScore(playerName, best).catch(error => setLeaderboardStatus(error.message, "error"));
       });
 
@@ -1088,8 +1125,7 @@
         event.preventDefault();
         if (state === "ready") {
           if (!playerName) playerNameInput.focus();
-          else begin();
-        } else if (state === "over") return;
+        } else if (state === "over" || state === "start" || state === "countdown") return;
         else flap();
       });
 
@@ -1133,9 +1169,9 @@
           return;
         }
         if (event.code !== "Space" && event.code !== "ArrowUp") return;
+        if (state === "ready" || state === "start" || state === "over" || state === "countdown") return;
         event.preventDefault();
-        if (state === "ready" || state === "over") begin();
-        else if (state === "paused") {
+        if (state === "paused") {
           setMenuOpen(false);
           togglePause();
         }
