@@ -533,7 +533,7 @@
       }
 
       function createGate(x, previousGapY = null, previousPhase = 0) {
-        const gateHeight = Math.max(150, 175 - Math.floor(score / 6) * 4);
+        const gateHeight = Math.max(175, 195 - Math.floor(score / 8) * 2);
         const minGapY = gateHeight / 2 + shark.size + 25;
         const maxGapY = floorY - gateHeight / 2 - shark.size - 25;
         let gapY = minGapY + Math.random() * (maxGapY - minGapY);
@@ -1018,7 +1018,7 @@
         shark.vy += 1250 * dt;
         shark.y += shark.vy * dt;
 
-        const speed = 165 + Math.min(score * 3, 75);
+        const speed = 165;
         for (const gate of gates) {
           gate.x -= speed * dt;
           if (!gate.scored && gate.x + gateWidth < shark.x) {
