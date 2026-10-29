@@ -557,14 +557,17 @@
           return;
         }
         reset();
-        state = "countdown";
-        countdownEndsAt = performance.now() + 3000;
         overlay.classList.remove("restart-only");
         overlay.classList.remove("game-over");
         copy.textContent = "";
+        startCountdown();
+      }
+
+      function startCountdown() {
+        state = "countdown";
+        countdownEndsAt = performance.now() + 3000;
         overlay.hidden = true;
         setMenuOpen(false);
-        flap();
       }
 
       function setMenuOpen(open) {
@@ -583,8 +586,7 @@
           startButton.textContent = "Resume swimming";
           overlay.hidden = false;
         } else if (state === "paused") {
-          state = "playing";
-          overlay.hidden = true;
+          startCountdown();
         } else {
           return;
         }
@@ -1146,10 +1148,8 @@
       });
       continueButton.addEventListener("click", () => {
         if (state === "paused") {
-          state = "playing";
-          overlay.hidden = true;
-        }
-        setMenuOpen(false);
+          startCountdown();
+        } else setMenuOpen(false);
       });
       restartButton.addEventListener("click", () => {
         begin();
